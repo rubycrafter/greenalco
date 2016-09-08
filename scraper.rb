@@ -4,7 +4,7 @@ require 'scraperwiki'
 require 'mechanize'
 
 class Parser
-  attr_accessor :url, :tag, :doc, :headers, :catalog
+  attr_accessor :url, :tag, :doc, :headers
 
   def initialize
     @tag = Hash.new
@@ -18,11 +18,11 @@ class Parser
     @tag[:price] = '.price span' #needs regexp
     @tag[:price2] = '.price' #needs regexp
     @tag[:description] = '.tab-content'
+    @tag[:photo] = '.image a img'
 
     @url = 'http://greenalco.ru'
     @agent = Mechanize.new
-    @headers = %w(name paramsynonym category currency price description url)
-    @catalog = []
+    @headers = %w(name paramsynonym category currency price description photos url)
     configure_scraper
   end
 
@@ -36,12 +36,7 @@ class Parser
   private
 
   def add_record(arr)
-    @catalog << arr
     save_to_sqlite(arr)
-  end
-
-  def add_header
-    add_record(@headers)
   end
 
   def scan_main_page
@@ -85,7 +80,8 @@ class Parser
         arr << @agent.page.at(@tag[:price2]).content.split(' ')[0]
       end
 
-      arr << @agent.page.at(@tag[:description]).content.strip
+      arr << @agent.page.at(@tag[:description]).content.strip.chomp
+      arr << @agent.page.at(@tag[:photo])['src']
       arr << item['href']
     end
     save_to_sqlite arr
